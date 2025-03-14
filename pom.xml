@@ -11,7 +11,7 @@
     <properties>
         <spark.version>2.4.3</spark.version>
         <flink.version>1.11.1</flink.version>
-        <scala.version>2.11</scala.version>
+        <scala.version>2.12</scala.version>
         <httpclient.version>4.5.8</httpclient.version>
         <httpasyncclient.version>4.1.4</httpasyncclient.version>
         <maven.compiler.source>1.8</maven.compiler.source>
@@ -23,9 +23,20 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.8.1</version>
                 <configuration>
                     <source>1.8</source>
                     <target>1.8</target>
+                    <encoding>UTF-8</encoding>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>3.2.0</version>
+                <configuration>
+                    <encoding>UTF-8</encoding>
                 </configuration>
             </plugin>
 
@@ -110,7 +121,7 @@
         <!-- https://mvnrepository.com/artifact/com.jsuereth/scala-arm -->
         <dependency>
             <groupId>com.jsuereth</groupId>
-            <artifactId>scala-arm_2.11</artifactId>
+            <artifactId>scala-arm_2.12</artifactId>
             <version>2.0</version>
         </dependency>
 
@@ -222,6 +233,13 @@
             <groupId>org.apache.flink</groupId>
             <artifactId>flink-clients_2.11</artifactId>
             <version>${flink.version}</version>
+        </dependency>
+
+        <!-- log4j -->
+        <dependency>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+            <version>1.2.17</version>
         </dependency>
 
     </dependencies>

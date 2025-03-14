@@ -256,6 +256,7 @@ public class DataManager {
             switch (sortBy){
                 case "rating":movies.sort((m1, m2) -> Double.compare(m2.getAverageRating(), m1.getAverageRating()));break;
                 case "releaseYear": movies.sort((m1, m2) -> Integer.compare(m2.getReleaseYear(), m1.getReleaseYear()));break;
+                case "ratingNumber": movies.sort((m1, m2) -> Integer.compare(m2.getRatingNumber(), m1.getRatingNumber()));break;
                 default:
             }
 

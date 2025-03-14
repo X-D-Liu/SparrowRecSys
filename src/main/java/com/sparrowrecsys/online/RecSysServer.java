@@ -34,6 +34,7 @@ public class RecSysServer {
         //set ip and port number
         InetSocketAddress inetAddress = new InetSocketAddress("0.0.0.0", port);
         Server server = new Server(inetAddress);
+//        server.setStopTimeout(4000);
 
         //get index.html path
         URL webRootLocation = this.getClass().getResource("/webroot/index.html");
