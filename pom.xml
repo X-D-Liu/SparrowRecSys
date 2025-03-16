@@ -11,7 +11,7 @@
     <properties>
         <spark.version>2.4.3</spark.version>
         <flink.version>1.11.1</flink.version>
-        <scala.version>2.12</scala.version>
+        <scala.version>2.11</scala.version>
         <httpclient.version>4.5.8</httpclient.version>
         <httpasyncclient.version>4.1.4</httpasyncclient.version>
         <maven.compiler.source>1.8</maven.compiler.source>
@@ -121,7 +121,7 @@
         <!-- https://mvnrepository.com/artifact/com.jsuereth/scala-arm -->
         <dependency>
             <groupId>com.jsuereth</groupId>
-            <artifactId>scala-arm_2.12</artifactId>
+            <artifactId>scala-arm_2.11</artifactId>
             <version>2.0</version>
         </dependency>
 
