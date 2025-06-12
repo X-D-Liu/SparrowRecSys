@@ -33,7 +33,7 @@ object FeatureEngForRecModel {
     //add movie basic features
     val samplesWithMovies1 = ratingSamples.join(movieSamples, Seq("movieId"), "left")
     //add release year
-    val extractReleaseYearUdf = udf({(title: String) => {
+    val  extractReleaseYearUdf = udf({(title: String) => {
       if (null == title || title.trim.length < 6) {
         1990 // default value
       }

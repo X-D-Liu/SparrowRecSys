@@ -256,6 +256,7 @@ object Embedding {
     }
     
     def graphEmb(samples: RDD[Seq[String]], sparkSession: SparkSession, embLength: Int, embOutputFilename: String, saveToRedis: Boolean, redisKeyPrefix: String): Word2VecModel = {
+        // 生成转移概率矩阵，这里以Map的结构存储
         val transitionMatrixAndItemDis = generateTransitionMatrix(samples)
         
         println(transitionMatrixAndItemDis._1.size)
@@ -284,7 +285,7 @@ object Embedding {
         
         val samples = processItemSequence(spark, rawSampleDataPath)
         val model = trainItem2vec(spark, samples, embLength, "item2vecEmb.csv", saveToRedis = true, "i2vEmb")
-        //graphEmb(samples, spark, embLength, "itemGraphEmb.csv", saveToRedis = true, "graphEmb")
-        //generateUserEmb(spark, rawSampleDataPath, model, embLength, "userEmb.csv", saveToRedis = false, "uEmb")
+//        graphEmb(samples, spark, embLength, "itemGraphEmb.csv", saveToRedis = true, "graphEmb")
+//        generateUserEmb(spark, rawSampleDataPath, model, embLength, "userEmb.csv", saveToRedis = true, "uEmb")
     }
 }
