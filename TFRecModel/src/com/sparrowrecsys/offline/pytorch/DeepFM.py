@@ -4,6 +4,8 @@ import pandas as pd
 import torch.utils.data as data_utils
 import torch.nn as nn
 import tqdm
+from torchmetrics.utilities import dim_zero_sum
+
 
 class MovieRatingDataset(data_utils.Dataset):
     def __init__(self, datapath):
@@ -59,39 +61,67 @@ class DeepFMModel(nn.Module):
         self.config = config
         # 一阶稀疏特征
         self.first_order_emb = nn.ModuleDict({
-            name: nn.Embedding(num_embeddings, 1) for name, num_embeddings in config['num_cat_features'].items()
+            name: nn.Embedding(num_embeddings+1, 1) for name, num_embeddings in config['num_cat_features'].items()
         })
         self.fm_1st_order_output = nn.Linear(len(config['num_cat_features']) + config['num_con_features'], 1)
         # 二阶稀疏特征
         embedding_dim = config.get('embedding_dim', 10)
         self.second_order_emb = nn.ModuleDict({
-            name: nn.Embedding(num_embeddings, embedding_dim) for name, num_embeddings in config['num_cat_features'].items()
+            name: nn.Embedding(num_embeddings+1, embedding_dim) for name, num_embeddings in
+            config['num_cat_features'].items()
         })
         # DNN
         hidden_units = config['hidden_units']
         deep_layers = [
             nn.Linear(len(config['num_cat_features']) * embedding_dim + config['num_con_features'], hidden_units[0]),
-            nn.ReLU()
+            nn.BatchNorm1d(hidden_units[0]),
+            nn.ReLU(),
+            nn.Dropout(config.get('dropout_rate', 0.3))
         ]
         for i in range(1, len(hidden_units)):
             deep_layers.append(nn.Linear(hidden_units[i - 1], hidden_units[i]))
+            deep_layers.append(nn.BatchNorm1d(hidden_units[i]))
             deep_layers.append(nn.ReLU())
+            deep_layers.append(nn.Dropout(config.get('dropout_rate', 0.3)))
         self.deep_nn = nn.Sequential(*deep_layers)
         self.deep_output = nn.Linear(hidden_units[-1], 1)
+        self._init_weight()
+
+    def _init_weight(self):
+        # embeddings
+        for emb_layer in self.first_order_emb.values():
+            nn.init.uniform_(emb_layer.weight)
+        for emb_layer in self.second_order_emb.values():
+            nn.init.xavier_uniform_(emb_layer.weight)
+        nn.init.xavier_normal_(self.fm_1st_order_output.weight)
+        nn.init.constant_(self.fm_1st_order_output.bias, 0)
+        for layer in self.deep_nn:
+            if isinstance(layer, nn.Linear):
+                nn.init.kaiming_normal_(layer.weight, mode='fan_in', nonlinearity='relu')
+                nn.init.constant_(layer.bias, 0)
+        nn.init.xavier_normal_(self.deep_output.weight)
+        nn.init.constant_(self.deep_output.bias, 0)
+        # nn
+        pass
 
     def forward(self, inputs):
         # FM一阶特征交叉
-        fm_1st_order_fea = torch.concat([self.first_order_emb[name](fea) for name, fea in inputs['cat_fea'].items()] + [inputs['num_fea']], dim=1)
+        fm_1st_order_fea = torch.concat(
+            [self.first_order_emb[name](fea) for name, fea in inputs['cat_fea'].items()] + [inputs['num_fea']], dim=1)
         fm_1st_order_output = self.fm_1st_order_output(fm_1st_order_fea)
         # FM二阶特征交叉
-        fm_2nd_order_fea = torch.concat([self.second_order_emb[name](fea) for name, fea in inputs['cat_fea'].items()] + [inputs['num_fea']], dim=1)
-
-
+        fm_2nd_order_fea = [self.second_order_emb[name](fea) for name, fea in inputs['cat_fea'].items()]
+        fm_2nd_order_sum = torch.sum(torch.stack(fm_2nd_order_fea), dim=0)
+        fm_2nd_order_sum_square = torch.sum(fm_2nd_order_sum ** 2, dim=1, keepdim=True)
+        fm_2nd_order_square_sum = torch.sum(torch.stack(fm_2nd_order_fea) ** 2, dim=(0, 2), keepdim=True).squeeze(0)
+        fm_2nd_order_output = 0.5 * (fm_2nd_order_sum_square - fm_2nd_order_square_sum)
         # Deep
+        deep_fea = torch.concat(fm_2nd_order_fea + [inputs['num_fea']], dim=1)
+        deep_output = self.deep_output(self.deep_nn(deep_fea))
+        # Add
+        combined = fm_1st_order_output + fm_2nd_order_output + deep_output
 
-        # sigmoid
-
-        return
+        return torch.sigmoid(combined)
 
 
 if __name__ == '__main__':
@@ -104,14 +134,15 @@ if __name__ == '__main__':
     model_config = {
         'num_cat_features': dataset_train.num_cat_features,
         'num_con_features': dataset_train.num_con_features,
-        'hidden_units': [64, 32, 16],
-        'embedding_dim': 10
+        'hidden_units': [32, 16, 8],
+        'embedding_dim': 10,
+        'dropout_rate': 0.3
     }
     model = DeepFMModel(config=model_config)
     # loss
     criterion = nn.BCELoss()
     # 优化器
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=0.01)
     # 指标
     metric_acc = torchmetrics.Accuracy(task='binary')
     metric_rocauc = torchmetrics.AUROC(task='binary')
@@ -165,4 +196,4 @@ if __name__ == '__main__':
             metric_rocauc.update(outputs, labels.to(torch.int))
             metric_prauc.update(outputs, labels.to(torch.int))
     print(
-        f'Loss: {avg_loss/eval_count}, ACC: {metric_acc.compute()}, ROC_AUC: {metric_rocauc.compute()}, PR_AUC: {metric_prauc.compute()}')
+        f'Loss: {avg_loss / eval_count}, ACC: {metric_acc.compute()}, ROC_AUC: {metric_rocauc.compute()}, PR_AUC: {metric_prauc.compute()}')
