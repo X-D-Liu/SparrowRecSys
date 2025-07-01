@@ -4,7 +4,6 @@ import pandas as pd
 import torch.utils.data as data_utils
 import torch.nn as nn
 import tqdm
-from torchmetrics.utilities import dim_zero_sum
 
 
 class MovieRatingDataset(data_utils.Dataset):
